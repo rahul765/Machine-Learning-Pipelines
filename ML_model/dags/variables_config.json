@@ -1,0 +1,16 @@
+{
+	"variables_config": {
+		"data_path": "/usr/local/airflow/models/data/50_startups.csv",
+		"preprocessed_data": "/usr/local/airflow/models/data/preprocessed_data.csv",
+		"scaled_data": "/usr/local/airflow/models/data/scaled_data.csv",
+		"training_data": "/usr/local/airflow/models/data/training_data.csv",
+		"testing_data": "/usr/local/airflow/models/data/testing_data.csv",
+		"LR_results": "/usr/local/airflow/models/results/LR_results.csv",
+		"DT_results": "/usr/local/airflow/models/results/DT_results.csv",
+		"RF_results": "/usr/local/airflow/models/results/RF_results.csv",
+		"SVR_results": "/usr/local/airflow/models/results/SVR_results.csv",
+		"GBR_results": "/usr/local/airflow/models/results/GBR_results.csv",
+		"var2": [1, 2, 3],
+		"var3": {"k": "value3"}
+	}
+}
