@@ -7,4 +7,4 @@
 
 ![](Images/Workflow_Regression.png)
 
-![](Image/graph.png)
+![](Images/graph.png)
