@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import os
+import sqlite3
+
 from airflow.models import Variable
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -26,6 +28,7 @@ DT_results = dag_config["DT_results"]
 RF_results = dag_config["RF_results"]
 SVR_results = dag_config["SVR_results"]
 GBR_results = dag_config["GBR_results"]
+BestModel_results = dag_config["BestModel_results"]
 
 # Checking if Data is availabe
 def data_is_available(_file_name=data_path, **kwargs):
@@ -159,6 +162,48 @@ def model_5_GBR(_file_name=training_data, _test_file=testing_data, **kwargs):
     test_results.to_csv(GBR_results)
     print(test_results)
 
+def best_model(m1=LR_results, m2=DT_results, m3=RF_results, m4=SVR_results, m5=GBR_results, best=BestModel_results, **kwargs):
+    dt = pd.read_csv(m2)
+    rf = pd.read_csv(m3)
+    gbr = pd.read_csv(m5)
+    lr = pd.read_csv(m1)
+    svr = pd.read_csv(m4)
+    conn = sqlite3.connect(':memory:')
+    dt.to_sql('dt',conn,index=False)
+    rf.to_sql('rf',conn,index=False)
+    gbr.to_sql('gbr',conn,index=False)
+    lr.to_sql('lr',conn,index=False)
+    svr.to_sql('svr',conn,index=False)
+    tmp=pd.read_sql_query('''select dt."Unnamed: 0" as ErrorMetric,
+    case
+    when dt."Unnamed: 0"<>'Adjusted_RSquare_test' and dt."Test Values"<rf."Test Values" and dt."Test Values"<gbr."Test Values" and dt."Test Values"<lr."Test Values" and dt."Test Values"<svr."Test Values"
+        then 'DT'
+    when dt."Unnamed: 0"<>'Adjusted_RSquare_test' and rf."Test Values"<dt."Test Values" and rf."Test Values"<gbr."Test Values" and rf."Test Values"<lr."Test Values" and rf."Test Values"<svr."Test Values"
+        then 'RF'
+    when dt."Unnamed: 0"<>'Adjusted_RSquare_test' and gbr."Test Values"<dt."Test Values" and gbr."Test Values"<rf."Test Values" and gbr."Test Values"<lr."Test Values" and gbr."Test Values"<svr."Test Values"
+        then 'GBR'
+    when dt."Unnamed: 0"<>'Adjusted_RSquare_test' and lr."Test Values"<dt."Test Values" and lr."Test Values"<rf."Test Values" and lr."Test Values"<gbr."Test Values" and lr."Test Values"<svr."Test Values"
+        then 'LR'
+    when dt."Unnamed: 0"<>'Adjusted_RSquare_test' and svr."Test Values"<dt."Test Values" and svr."Test Values"<rf."Test Values" and svr."Test Values"<lr."Test Values" and svr."Test Values"<gbr."Test Values"
+        then 'SVR'
+    when dt."Unnamed: 0"='Adjusted_RSquare_test' and dt."Test Values">rf."Test Values" and dt."Test Values">gbr."Test Values" and dt."Test Values">lr."Test Values" and dt."Test Values">svr."Test Values"
+        then 'DT'
+    when dt."Unnamed: 0"='Adjusted_RSquare_test' and rf."Test Values">dt."Test Values" and rf."Test Values">gbr."Test Values" and rf."Test Values">lr."Test Values" and rf."Test Values">svr."Test Values"
+        then 'RF'
+    when dt."Unnamed: 0"='Adjusted_RSquare_test' and gbr."Test Values">dt."Test Values" and gbr."Test Values">rf."Test Values" and gbr."Test Values">lr."Test Values" and gbr."Test Values">svr."Test Values"
+        then 'GBR'
+    when dt."Unnamed: 0"='Adjusted_RSquare_test' and lr."Test Values">dt."Test Values" and lr."Test Values">rf."Test Values" and lr."Test Values">gbr."Test Values" and lr."Test Values">svr."Test Values"
+        then 'LR'
+    when dt."Unnamed: 0"='Adjusted_RSquare_test' and svr."Test Values">dt."Test Values" and svr."Test Values">rf."Test Values" and svr."Test Values">lr."Test Values" and svr."Test Values">gbr."Test Values"
+        then 'SVR'
+    end as BestModel
+    from dt
+    inner join rf on dt."Unnamed: 0"=rf."Unnamed: 0"
+    inner join gbr on gbr."Unnamed: 0"=rf."Unnamed: 0"
+    inner join lr on lr."Unnamed: 0"=gbr."Unnamed: 0"
+    inner join svr on svr."Unnamed: 0"=lr."Unnamed: 0"''',conn)
+    tmp.to_csv(best)
+
 project_cfg = {
     'owner': 'airflow',
     'email': ['your-email@example.com'],
@@ -236,4 +281,11 @@ task_5_5 = PythonOperator(
     dag=dag,
 )
 
-task_1 >> task_2 >> task_3 >> task_4 >> [task_5_1, task_5_2, task_5_3, task_5_4, task_5_5]
+task_6 = PythonOperator(
+    task_id='best_model',
+    provide_context=True,
+    python_callable=best_model,
+    dag=dag,
+)
+
+task_1 >> task_2 >> task_3 >> task_4 >> [task_5_1, task_5_2, task_5_3, task_5_4, task_5_5] >> task_6

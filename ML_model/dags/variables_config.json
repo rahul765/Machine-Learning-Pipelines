@@ -10,6 +10,7 @@
 		"RF_results": "/usr/local/airflow/models/results/RF_results.csv",
 		"SVR_results": "/usr/local/airflow/models/results/SVR_results.csv",
 		"GBR_results": "/usr/local/airflow/models/results/GBR_results.csv",
+		"BestModel_results": "/usr/local/airflow/models/results/BestModel_results.csv",
 		"var2": [1, 2, 3],
 		"var3": {"k": "value3"}
 	}
